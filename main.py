@@ -1,16 +1,9 @@
-import torch
-from pythonosc import dispatcher, osc_server
-from pythonosc.udp_client import SimpleUDPClient
-import random
-from models import LSTMMemory
 
-IP = "127.0.0.1"
-PORT = 9004
+
 
 client = SimpleUDPClient(IP, PORT + 1)
 
-model = torch.load("./vel.pt")
-model.reset_live()
+
 
 def handle_velocity(address, args):
     print(f"Receiving message at {address} : {args}")
