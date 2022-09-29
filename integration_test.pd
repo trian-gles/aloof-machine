@@ -14,13 +14,16 @@
 #X msg 60 41 30;
 #X msg 359 31 10;
 #X obj 206 390 print modulator-freq;
-#X obj 262 305 route modulator-freq;
+#X obj 371 389 print modulator-amp;
+#X obj 532 387 print carrier-freq;
+#X obj 553 72 loadbang;
+#X obj 262 305 route modulator-freq modulator-amp carrier-freq;
 #X connect 0 0 2 0;
 #X connect 1 0 2 0;
 #X connect 3 0 4 0;
 #X connect 4 0 2 0;
 #X connect 5 0 6 0;
-#X connect 6 0 15 0;
+#X connect 6 0 18 0;
 #X connect 7 0 5 0;
 #X connect 8 0 9 0;
 #X connect 9 0 3 0;
@@ -28,4 +31,7 @@
 #X connect 11 0 3 0;
 #X connect 12 0 10 0;
 #X connect 13 0 11 0;
-#X connect 15 0 14 0;
+#X connect 17 0 0 0;
+#X connect 18 0 14 0;
+#X connect 18 1 15 0;
+#X connect 18 2 16 0;

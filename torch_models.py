@@ -19,13 +19,16 @@ class LSTMMemory(torch.nn.Module):
             out_features=output_size
         )
 
+    self.input_size = input_size
+
   def forward(self, x):
     h = self.lstm(x)[0]
 
     return self.linear(h)
 
   def forward_live(self, x):
-    x = torch.tensor(self._scaler.transform(x).reshape((1, 1)).astype(np.float32))
+    
+    x = torch.tensor(self._scaler.transform(x).reshape((1, self.input_size)).astype(np.float32))
     if self._hidden_state:
       h, self._hidden_state = self.lstm(x, self._hidden_state)
     else:

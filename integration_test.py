@@ -4,13 +4,13 @@ from torch_models import LSTMMemory
 MODEL_NAMES = [
     "max-pitch-1.pt",
     "max-pitch-2.pt",
-    "time-max-1.pt"
+    "max-time-1.pt"
 ]
 
 INPUT_NAMES = [
     ["/max", "/pitch"],
     ["/max", "/pitch"],
-    ["/time", "/max"]
+    ["/max", "/time"]
 ]
 
 OUTPUT_NAMES = [
@@ -20,9 +20,9 @@ OUTPUT_NAMES = [
 ]
 
 FILTERS = [
-    LiveFilter(4),
-    None,
-    None
+    [LiveFilter(4), None],
+    [LiveFilter(4), None],
+    [LiveFilter(4), None]
 ]
 
 if __name__ == "__main__":

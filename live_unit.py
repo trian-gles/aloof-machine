@@ -8,6 +8,7 @@ from torch_models import LSTMMemory
 from collections import deque
 from typing import List, Any, Union
 import random
+import numpy as np
 
 
 
@@ -36,6 +37,7 @@ class LiveFilter:
 
         return sum(self.past_inputs) / len(self.past_inputs)  
 
+
 class Controller:
     def __init__(self, model_names, input_names, filters, output_names):
 
@@ -56,62 +58,44 @@ class Controller:
 
 
 class ModelWrapper:
-    def __init__(self, name: str, input_names: List[str], filter: Union[LiveFilter, None], output_name: str, dispatcher: Dispatcher, client: SimpleUDPClient):
+    def __init__(self, name: str, input_names: List[str], filters: List[Union[LiveFilter, None]], output_name: str, dispatcher: Dispatcher, client: SimpleUDPClient):
         self.model: LSTMMemory = torch.load("models/" + name)
         self.input_names = input_names
         self.output_name = output_name
         self.stored_vals = {}
         self.client = client
-        self.filter = filter
+        self.filters = {}
 
         debug(f"Creating handler for inputs {self.input_names} and outputs {self.output_name} with model {name} and filter {filter}")
 
-        for input in input_names:
+        for i, input in enumerate(input_names):
+            if filters[i]:
+                self.filters[input] = filters[i]
             dispatcher.map(input, self.handle)
 
     def handle(self, address: str, *args: List[Any]):
         inp = args[0]
-        if self.filter:
-            inp = self.filter.input(inp)
+        if address in self.filters:
+            inp = self.filters[address].input(inp)
 
         debug(f"Received {inp} for handler for inputs {self.input_names} and outputs {self.output_name}")
-        self.stored_vals[address] = args[0]
+
+        self.stored_vals[address] = inp
+
+        self.check_vals_full()
 
     def check_vals_full(self):
         '''If all values are populated, we send out an OSC response'''
 
         if set(self.input_names) == set(self.stored_vals.keys()):
-            # run the model here
-            self.client.send_message(self.output_name, random.random())
+
+            inp_list = [self.stored_vals[inp] for inp in self.input_names]
+            out = self.model.forward_live(np.array(inp_list).reshape(1, len(self.input_names))).item()
+
+
+            self.client.send_message(self.output_name, out)
             self.stored_vals.clear()
             debug(f"Values populated, sending output for {self.output_name}")
 
 
-if __name__ == "__main__":
-    MODEL_NAMES = [
-        "max-pitch-1.pt",
-        "max-pitch-2.pt",
-        "time-max-1.pt"
-    ]
-
-    INPUT_NAMES = [
-        ["/max", "/pitch"],
-        ["/max", "/pitch"],
-        ["/time", "/max"]
-    ]
-
-    OUTPUT_NAMES = [
-        "/carrier-freq",
-        "/modulator-freq",
-        "/modulator-amp"
-    ]
-
-    FILTERS = [
-        LiveFilter(4),
-        None,
-        None
-    ]
-    
-    controller = Controller(MODEL_NAMES, INPUT_NAMES, FILTERS, OUTPUT_NAMES)
-    controller.run()
 
