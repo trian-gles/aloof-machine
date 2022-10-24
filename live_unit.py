@@ -10,10 +10,12 @@ from typing import List, Any, Union
 import random
 import numpy as np
 
+from visual.live_plot import LiveMultiPlot
 
 
 
-DEBUG = True
+
+DEBUG = False
 
 def debug(msg: str):
     if DEBUG:
@@ -39,26 +41,51 @@ class LiveFilter:
 
 
 class Controller:
-    def __init__(self, model_names, input_names, filters, output_names):
+    def __init__(self, model_names, input_names, filters, output_names, visual=False):
+        
 
         self.dispatcher = Dispatcher()
         self.client = SimpleUDPClient(IP, PORT + 1)
         self.server = osc_server.ThreadingOSCUDPServer((IP, PORT), self.dispatcher)
 
+        self.plot = None
+        self.visual = visual
+        if visual:
+            rows = 2
+            
+            all_inputs = set()
+
+            for inputs in input_names:
+                all_inputs.update(inputs)
+
+            all_inputs = list(all_inputs)
+            cols = max(len(all_inputs), len(output_names))
+
+            for i, input in enumerate(all_inputs):
+                self.dispatcher.map(input, self.handle_plot, i)
+            self.plot = LiveMultiPlot(rows, cols, 10, [-4, 4], [all_inputs, output_names])
+
         self.model_wrappers = []
         for i in range(len(model_names)):
-            model_wrap = ModelWrapper(model_names[i], input_names[i], filters[i], output_names[i], self.dispatcher, self.client)
+            model_wrap = ModelWrapper(i, model_names[i], input_names[i], filters[i], output_names[i], self.dispatcher, self.client, self.plot)
             self.model_wrappers.append(model_wrap)
+                
+    
+    def handle_plot(self, address, index, *data):
+        debug(f"Handling plot for {address} at index {index} with data {data}")
+        self.plot.update(0, index[0], data[0])
 
     def run(self):
-        time.sleep(1)
         debug("RUNNING SERVER")
         
         self.server.serve_forever()
 
 
 class ModelWrapper:
-    def __init__(self, name: str, input_names: List[str], filters: List[Union[LiveFilter, None]], output_name: str, dispatcher: Dispatcher, client: SimpleUDPClient):
+    def __init__(self, index: int, name: str, input_names: List[str], filters: List[Union[LiveFilter, None]], 
+    output_name: str, dispatcher: Dispatcher, client: SimpleUDPClient, plot: Union[LiveMultiPlot, None]):
+        self.index = index
+        self.plot = plot
         self.model: LSTMMemory = torch.load("models/" + name)
         self.input_names = input_names
         self.output_name = output_name
@@ -92,8 +119,10 @@ class ModelWrapper:
             inp_list = [self.stored_vals[inp] for inp in self.input_names]
             out = self.model.forward_live(np.array(inp_list).reshape(1, len(self.input_names))).item()
 
-
-            self.client.send_message(self.output_name, out)
+            if self.plot:
+                self.plot.update(1, self.index, out)
+                self.plot.draw_all()
+            self.client.send_message(self.output_name, out * 3)
             self.stored_vals.clear()
             debug(f"Values populated, sending output for {self.output_name}")
 

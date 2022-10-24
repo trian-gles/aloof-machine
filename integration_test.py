@@ -26,7 +26,7 @@ FILTERS = [
 ]
 
 if __name__ == "__main__":
-    controller = Controller(MODEL_NAMES, INPUT_NAMES, FILTERS, OUTPUT_NAMES)
+    controller = Controller(MODEL_NAMES, INPUT_NAMES, FILTERS, OUTPUT_NAMES, visual=True)
     controller.run()
 
 
