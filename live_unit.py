@@ -15,7 +15,7 @@ from visual.live_plot import LiveMultiPlot
 
 
 
-DEBUG = False
+DEBUG = True
 
 def debug(msg: str):
     if DEBUG:
@@ -24,6 +24,7 @@ def debug(msg: str):
 
 IP = "127.0.0.1"
 PORT = 9004
+OUTPORT = 9006
 
 class LiveFilter:
     def __init__(self, kernel_size: int):
@@ -45,7 +46,7 @@ class Controller:
         
 
         self.dispatcher = Dispatcher()
-        self.client = SimpleUDPClient(IP, PORT + 1)
+        self.client = SimpleUDPClient(IP, OUTPORT)
         self.server = osc_server.ThreadingOSCUDPServer((IP, PORT), self.dispatcher)
 
         self.plot = None
@@ -105,7 +106,7 @@ class ModelWrapper:
         if address in self.filters:
             inp = self.filters[address].input(inp)
 
-        debug(f"Received {inp} for handler for inputs {self.input_names} and outputs {self.output_name}")
+        debug(f"Received {address} : {inp} for handler for inputs {self.input_names} and outputs {self.output_name}")
 
         self.stored_vals[address] = inp
 
